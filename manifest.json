@@ -1,0 +1,20 @@
+{
+  "name": "Checklist SOP UAV - PT. Multi Sarana Avindo",
+  "short_name": "UAV Checklist",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://lh3.googleusercontent.com/d/1VKyZsEP3mWBMQ6p9tpOgkpCoCgoUNCA_",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://lh3.googleusercontent.com/d/1VKyZsEP3mWBMQ6p9tpOgkpCoCgoUNCA_",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

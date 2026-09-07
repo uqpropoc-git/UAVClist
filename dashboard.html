@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard UAV Checklist</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-12 font-sans flex flex-col justify-between">
+
+  <div>
+    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md bg-opacity-80">
+      <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div class="flex items-center space-x-3">
+          <div class="p-1 rounded-lg border border-slate-700/50 bg-slate-800/50 flex items-center justify-center">
+            <img src="https://lh3.googleusercontent.com/d/1VKyZsEP3mWBMQ6p9tpOgkpCoCgoUNCA_" alt="Logo" class="h-10 w-auto object-contain rounded"/>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold text-slate-100 tracking-wide">DASHBOARD UAV FLIGHT LOGS</h1>
+            <p class="text-xs text-slate-400">PT MULTISARANA AVINDO</p>
+          </div>
+        </div>
+
+        <a href="index.html" class="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg border border-blue-500 font-medium transition duration-200 w-fit flex items-center gap-1 shadow-md">
+          <i class="fa-solid fa-plus"></i> Form Baru
+        </a>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 mt-8">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-lg">
+        <div class="flex flex-wrap items-center gap-3">
+          <i class="fa-solid fa-filter text-blue-400"></i>
+          <label class="text-xs font-semibold text-slate-300">Filter Periode Bulan:</label>
+          
+          <select id="monthSelect" onchange="syncAndLoadFromSelect()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+            <option value="ALL">-- Semua Periode --</option>
+          </select>
+
+          <span class="text-xs text-slate-500">atau</span>
+
+          <input type="month" id="monthFilter" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500" onchange="syncAndLoadFromInput()">
+          
+          <button onclick="resetFilter()" class="text-xs text-slate-400 hover:text-white underline ml-1">Tampilkan Semua</button>
+        </div>
+
+        <button onclick="generateMonthlyReport()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded-lg transition flex items-center justify-center gap-2 font-medium shadow-md">
+          <i class="fa-solid fa-file-excel text-sm"></i> Generate Spreadsheet Laporan
+        </button>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4 shadow-lg">
+          <div class="bg-blue-500/10 p-3 rounded-lg border border-blue-500/20 text-blue-400">
+            <i class="fa-solid fa-plane-departure text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 uppercase font-semibold">Total Penerbangan</p>
+            <h3 id="totalFlights" class="text-2xl font-bold text-slate-100">0</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4 shadow-lg">
+          <div class="bg-amber-500/10 p-3 rounded-lg border border-amber-500/20 text-amber-400">
+            <i class="fa-solid fa-stopwatch text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 uppercase font-semibold">Total Jam Terbang</p>
+            <h3 id="totalFlightTime" class="text-2xl font-bold text-amber-400">0j 0m</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4 shadow-lg">
+          <div class="bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20 text-emerald-400">
+            <i class="fa-solid fa-user-astronaut text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 uppercase font-semibold">Operator Aktif</p>
+            <h3 id="activeOperators" class="text-2xl font-bold text-slate-100">0</h3>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex items-center gap-4 shadow-lg">
+          <div class="bg-purple-500/10 p-3 rounded-lg border border-purple-500/20 text-purple-400">
+            <i class="fa-solid fa-mountain text-2xl"></i>
+          </div>
+          <div>
+            <p class="text-xs text-slate-400 uppercase font-semibold">Max Altitude</p>
+            <h3 id="maxAltitude" class="text-2xl font-bold text-slate-100">0 m</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+        <div class="p-4 border-b border-slate-800 flex justify-between items-center">
+          <h2 class="text-sm font-semibold text-slate-300">Riwayat Flight Log Checklist</h2>
+          <button onclick="loadDashboardData()" class="text-xs text-slate-400 hover:text-white transition flex items-center gap-1 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+            <i class="fa-solid fa-rotate-right"></i> Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-4">Waktu Submit</th>
+                <th class="py-3 px-4">Operator / Spektator</th>
+                <th class="py-3 px-4">Lokasi & Plan</th>
+                <th class="py-3 px-4">Altitude</th>
+                <th class="py-3 px-4">Waktu & Durasi</th>
+                <th class="py-3 px-4">Status Telemetri</th>
+                <th class="py-3 px-4">Cuaca & Suhu</th>
+                <th class="py-3 px-4">Satelit</th>
+                <th class="py-3 px-4">Note</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody" class="divide-y divide-slate-800">
+              <tr>
+                <td colspan="9" class="text-center py-6 text-slate-500">
+                  <i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <footer class="mt-12 text-center text-xs text-slate-500 border-t border-slate-900 pt-6">
+    <p>&copy; <span id="currentYear"></span> PT Multisarana Avindo. All rights reserved.</p>
+  </footer>
+
+  <script>
+    document.getElementById('currentYear').innerText = new Date().getFullYear();
+
+    function populateAvailableMonths() {
+      fetch(`${API_URL}?action=getMonths`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success && res.data) {
+            const select = document.getElementById('monthSelect');
+            select.innerHTML = '<option value="ALL">-- Semua Periode --</option>';
+            res.data.forEach(m => {
+              select.innerHTML += `<option value="${m}">${m}</option>`;
+            });
+          }
+        });
+    }
+
+    function syncAndLoadFromSelect() {
+      const val = document.getElementById('monthSelect').value;
+      document.getElementById('monthFilter').value = (val !== "ALL") ? val : "";
+      loadDashboardData();
+    }
+
+    function syncAndLoadFromInput() {
+      const val = document.getElementById('monthFilter').value;
+      document.getElementById('monthSelect').value = val ? val : "ALL";
+      loadDashboardData();
+    }
+
+    function resetFilter() {
+      document.getElementById('monthFilter').value = "";
+      document.getElementById('monthSelect').value = "ALL";
+      loadDashboardData();
+    }
+
+    function loadDashboardData() {
+      const selectedMonth = document.getElementById('monthFilter').value || "ALL";
+      const tbody = document.getElementById('tableBody');
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data...</td></tr>`;
+
+      fetch(`${API_URL}?action=getDashboard&month=${selectedMonth}`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) renderData(res.data);
+        });
+    }
+
+    function renderData(response) {
+      const tbody = document.getElementById('tableBody');
+      const logs = response ? response.logs : [];
+      const totalFlightTime = response ? response.totalFlightTime : "0j 0m";
+
+      if (!logs || logs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-500">Tidak ada data penerbangan untuk periode ini.</td></tr>`;
+        document.getElementById('totalFlights').innerText = "0";
+        document.getElementById('totalFlightTime').innerText = "0j 0m";
+        document.getElementById('activeOperators').innerText = "0";
+        document.getElementById('maxAltitude').innerText = "0 m";
+        return;
+      }
+
+      document.getElementById('totalFlights').innerText = logs.length;
+      document.getElementById('totalFlightTime').innerText = totalFlightTime;
+      
+      const uniqueOperators = [...new Set(logs.map(item => item.operator))].filter(Boolean).length;
+      document.getElementById('activeOperators').innerText = uniqueOperators;
+
+      const maxAlt = Math.max(...logs.map(item => Number(item.altitude) || 0));
+      document.getElementById('maxAltitude').innerText = `${maxAlt} m AGL`;
+
+      tbody.innerHTML = logs.map(row => `
+        <tr class="hover:bg-slate-800/40 transition duration-150">
+          <td class="py-3 px-4 whitespace-nowrap text-slate-400 font-mono">${row.timestamp}</td>
+          <td class="py-3 px-4">
+            <div class="font-medium text-slate-200">${row.operator || '-'}</div>
+            <div class="text-[10px] text-slate-500">Sp: ${row.spektator || '-'}</div>
+          </td>
+          <td class="py-3 px-4">
+            <div class="text-slate-300 font-medium">${row.location || '-'}</div>
+            <div class="text-[10px] text-slate-500">${row.plan || '-'}</div>
+          </td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded text-[10px] font-mono">${row.altitude || 0} m</span>
+          </td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <div class="text-slate-300 font-mono">${row.timeRange || '-'}</div>
+            <div class="text-[10px] text-amber-400 font-semibold"><i class="fa-solid fa-clock mr-1"></i>${row.duration || '-'}</div>
+          </td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <div class="text-[11px] text-slate-300"><i class="fa-solid fa-battery-three-quarters text-emerald-400 mr-1"></i>Drone: ${row.droneBatt || '-'}% (${row.droneTemp || '-'}°C)</div>
+            <div class="text-[10px] text-slate-500"><i class="fa-solid fa-gamepad text-blue-400 mr-1"></i>RC: ${row.rcBatt || '-'}%</div>
+          </td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <div class="text-slate-300 flex items-center">${row.weather || '-'}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5"><i class="fa-solid fa-temperature-half mr-1 text-rose-400"></i>${row.ambientTemp || '-'} °C</div>
+          </td>
+          <td class="py-3 px-4 whitespace-nowrap">
+            <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono"><i class="fa-solid fa-satellite mr-1"></i>${row.satellites || 0}</span>
+          </td>
+          <td class="py-3 px-4 text-slate-400 max-w-xs truncate">${row.note || '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function generateMonthlyReport() {
+      const selectedMonth = document.getElementById('monthFilter').value;
+      if (!selectedMonth || selectedMonth === "ALL") {
+        Swal.fire('Perhatian', 'Pilih periode bulan spesifik terlebih dahulu!', 'warning');
+        return;
+      }
+
+      Swal.fire({
+        title: 'Memproses Laporan...',
+        text: `Membuat Spreadsheet untuk periode ${selectedMonth}...`,
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      fetch(`${API_URL}?action=exportReport&month=${selectedMonth}`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Laporan Berhasil Dibuat!',
+              html: `${res.message}<br><br><a href="${res.fileUrl}" target="_blank" class="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 text-xs font-semibold">Buka Spreadsheet Laporan</a>`
+            });
+          } else {
+            Swal.fire('Gagal', res.message, 'error');
+          }
+        });
+    }
+
+    window.onload = function() {
+      const now = new Date();
+      const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      document.getElementById('monthFilter').value = currentMonthStr;
+      
+      populateAvailableMonths();
+      loadDashboardData();
+    };
+  </script>
+</body>
+</html>
