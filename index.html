@@ -209,7 +209,7 @@
   <script>
     document.getElementById('currentYear').innerText = new Date().getFullYear();
 
-    // Fungsi pembersih URL
+    // Helper untuk mengambil URL API secara aman
     function getCleanApiUrl() {
       if (typeof API_URL === 'undefined' || !API_URL) {
         console.error("API_URL belum dikonfigurasi di config.js");
@@ -220,44 +220,50 @@
 
     // Memuat daftar user saat halaman dibuka
     window.onload = function() {
+      loadUsers();
+    };
+
+    function loadUsers() {
       const baseUrl = getCleanApiUrl();
       if (!baseUrl) {
         Swal.fire({ icon: 'error', title: 'Konfigurasi Error', text: 'API_URL belum diset pada config.js' });
         return;
       }
 
-      const fetchUrl = `${baseUrl}?action=getUsers`;
+      fetch(`${baseUrl}?action=getUsers`)
+        .then(res => {
+          if (!res.ok) throw new Error(`HTTP Error status: ${res.status}`);
+          return res.json();
+        })
+        .then(res => {
+          if (res && res.success) {
+            populateUsers(res.data);
+          } else {
+            const errorMsg = (res && res.message) ? res.message : 'Gagal mengambil data user';
+            console.error("Gagal memuat user:", errorMsg);
+            showDropdownError(errorMsg);
+          }
+        })
+        .catch(err => {
+          console.error("Gagal Fetch Data User:", err);
+          showDropdownError("Koneksi gagal / URL API belum benar");
+        });
+    }
 
-      fetch(fetchUrl, {
-        method: 'GET',
-        redirect: 'follow'
-      })
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP Error status: ${res.status}`);
-        return res.json();
-      })
-      .then(res => {
-        if (res.success) {
-          populateUsers(res.data);
-        } else {
-          console.error("Gagal memuat user:", res.message);
-          Swal.fire({ icon: 'warning', title: 'Peringatan', text: res.message });
-        }
-      })
-      .catch(err => {
-        console.error("Gagal Fetch Data User:", err);
-        document.getElementById('operatorSelect').innerHTML = '<option value="">-- Gagal Memuat Data --</option>';
-        document.getElementById('spektatorSelect').innerHTML = '<option value="">-- Gagal Memuat Data --</option>';
-      });
-    };
+    function showDropdownError(message) {
+      const opSelect = document.getElementById('operatorSelect');
+      const spSelect = document.getElementById('spektatorSelect');
+      opSelect.innerHTML = `<option value="">-- ${message} --</option>`;
+      spSelect.innerHTML = `<option value="">-- ${message} --</option>`;
+    }
 
     function populateUsers(users) {
       const opSelect = document.getElementById('operatorSelect');
       const spSelect = document.getElementById('spektatorSelect');
 
       if (!users || users.length === 0) {
-        opSelect.innerHTML = '<option value="">-- Tidak ada user --</option>';
-        spSelect.innerHTML = '<option value="">-- Tidak ada user --</option>';
+        opSelect.innerHTML = '<option value="">-- Tidak ada user di Sheet --</option>';
+        spSelect.innerHTML = '<option value="">-- Tidak ada user di Sheet --</option>';
         return;
       }
 
@@ -314,7 +320,6 @@
 
       fetch(baseUrl, {
         method: 'POST',
-        redirect: 'follow',
         headers: {
           'Content-Type': 'text/plain;charset=utf-8'
         },
