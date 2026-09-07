@@ -2,12 +2,14 @@
 <html lang="id" class="dark">
 <head>
   <meta charset="UTF-8">
-  <title>Dashboard UAV Checklist</title>
+  <title>Dashboard UAV Flight Logs</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="config.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen pb-12 font-sans flex flex-col justify-between">
 
@@ -31,6 +33,7 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-6 mt-8">
+      <!-- Filter Bar -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 shadow-lg">
         <div class="flex flex-wrap items-center gap-3">
           <i class="fa-solid fa-filter text-blue-400"></i>
@@ -139,8 +142,20 @@
   <script>
     document.getElementById('currentYear').innerText = new Date().getFullYear();
 
+    // Helper untuk mengambil URL API secara aman
+    function getCleanApiUrl() {
+      if (typeof API_URL === 'undefined' || !API_URL) {
+        console.error("API_URL belum dikonfigurasi di config.js");
+        return null;
+      }
+      return API_URL.trim().split('?')[0];
+    }
+
     function populateAvailableMonths() {
-      fetch(`${API_URL}?action=getMonths`)
+      const baseUrl = getCleanApiUrl();
+      if (!baseUrl) return;
+
+      fetch(`${baseUrl}?action=getMonths`)
         .then(res => res.json())
         .then(res => {
           if (res.success && res.data) {
@@ -150,7 +165,8 @@
               select.innerHTML += `<option value="${m}">${m}</option>`;
             });
           }
-        });
+        })
+        .catch(err => console.error("Gagal memuat daftar bulan:", err));
     }
 
     function syncAndLoadFromSelect() {
@@ -172,14 +188,28 @@
     }
 
     function loadDashboardData() {
+      const baseUrl = getCleanApiUrl();
+      if (!baseUrl) {
+        Swal.fire('Error', 'API_URL belum dikonfigurasi di config.js', 'error');
+        return;
+      }
+
       const selectedMonth = document.getElementById('monthFilter').value || "ALL";
       const tbody = document.getElementById('tableBody');
       tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-slate-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Memuat data...</td></tr>`;
 
-      fetch(`${API_URL}?action=getDashboard&month=${selectedMonth}`)
+      fetch(`${baseUrl}?action=getDashboard&month=${selectedMonth}`)
         .then(res => res.json())
         .then(res => {
-          if (res.success) renderData(res.data);
+          if (res.success) {
+            renderData(res.data);
+          } else {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-rose-400"><i class="fa-solid fa-triangle-exclamation mr-2"></i> ${res.message || 'Gagal mengambil data'}</td></tr>`;
+          }
+        })
+        .catch(err => {
+          console.error("Gagal Fetch Dashboard:", err);
+          tbody.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-rose-400"><i class="fa-solid fa-circle-exclamation mr-2"></i> Terjadi kesalahan jaringan / koneksi.</td></tr>`;
         });
     }
 
@@ -208,7 +238,7 @@
 
       tbody.innerHTML = logs.map(row => `
         <tr class="hover:bg-slate-800/40 transition duration-150">
-          <td class="py-3 px-4 whitespace-nowrap text-slate-400 font-mono">${row.timestamp}</td>
+          <td class="py-3 px-4 whitespace-nowrap text-slate-400 font-mono">${row.timestamp || '-'}</td>
           <td class="py-3 px-4">
             <div class="font-medium text-slate-200">${row.operator || '-'}</div>
             <div class="text-[10px] text-slate-500">Sp: ${row.spektator || '-'}</div>
@@ -235,15 +265,27 @@
           <td class="py-3 px-4 whitespace-nowrap">
             <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono"><i class="fa-solid fa-satellite mr-1"></i>${row.satellites || 0}</span>
           </td>
-          <td class="py-3 px-4 text-slate-400 max-w-xs truncate">${row.note || '-'}</td>
+          <td class="py-3 px-4 text-slate-400 max-w-xs truncate" title="${row.note || ''}">${row.note || '-'}</td>
         </tr>
       `).join('');
     }
 
     function generateMonthlyReport() {
+      const baseUrl = getCleanApiUrl();
+      if (!baseUrl) {
+        Swal.fire('Error', 'API_URL belum dikonfigurasi!', 'error');
+        return;
+      }
+
       const selectedMonth = document.getElementById('monthFilter').value;
       if (!selectedMonth || selectedMonth === "ALL") {
-        Swal.fire('Perhatian', 'Pilih periode bulan spesifik terlebih dahulu!', 'warning');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Perhatian',
+          text: 'Pilih periode bulan spesifik terlebih dahulu!',
+          background: '#0f172a',
+          color: '#f8fafc'
+        });
         return;
       }
 
@@ -251,21 +293,40 @@
         title: 'Memproses Laporan...',
         text: `Membuat Spreadsheet untuk periode ${selectedMonth}...`,
         allowOutsideClick: false,
+        background: '#0f172a',
+        color: '#f8fafc',
         didOpen: () => Swal.showLoading()
       });
 
-      fetch(`${API_URL}?action=exportReport&month=${selectedMonth}`)
+      fetch(`${baseUrl}?action=exportReport&month=${selectedMonth}`)
         .then(res => res.json())
         .then(res => {
           if (res.success) {
             Swal.fire({
               icon: 'success',
               title: 'Laporan Berhasil Dibuat!',
-              html: `${res.message}<br><br><a href="${res.fileUrl}" target="_blank" class="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 text-xs font-semibold">Buka Spreadsheet Laporan</a>`
+              html: `${res.message}<br><br><a href="${res.fileUrl}" target="_blank" class="inline-block mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 text-xs font-semibold">Buka Spreadsheet Laporan</a>`,
+              background: '#0f172a',
+              color: '#f8fafc'
             });
           } else {
-            Swal.fire('Gagal', res.message, 'error');
+            Swal.fire({
+              icon: 'error',
+              title: 'Gagal',
+              text: res.message,
+              background: '#0f172a',
+              color: '#f8fafc'
+            });
           }
+        })
+        .catch(err => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error Network',
+            text: err.toString(),
+            background: '#0f172a',
+            color: '#f8fafc'
+          });
         });
     }
 
