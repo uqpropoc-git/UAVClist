@@ -34,6 +34,7 @@
 
     <main class="max-w-5xl mx-auto px-4 mt-8">
       <form id="checklistForm" onsubmit="handleSubmit(event)" class="space-y-6">
+        <!-- Section Informasi Penerbangan -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
           <h2 class="text-md font-semibold text-blue-400 uppercase tracking-wider mb-4 flex items-center gap-2">
@@ -208,13 +209,42 @@
   <script>
     document.getElementById('currentYear').innerText = new Date().getFullYear();
 
+    // Fungsi pembersih URL untuk menghindari bug tanda tanya ganda
+    function getCleanApiUrl() {
+      if (typeof API_URL === 'undefined' || !API_URL || API_URL.includes("https://script.google.com/macros/s/AKfycbz2eU1Ymca7VTSvVGHEYhG3TJp7W74no-2NFMe2c1SmE6lSC068N8x-bPuRw-VJF6UvIw/exec")) {
+        console.error("API_URL belum dikonfigurasi di config.js");
+        return null;
+      }
+      return API_URL.trim().split('?')[0];
+    }
+
+    // Memuat daftar user saat halaman dibuka
     window.onload = function() {
-      fetch(`${API_URL}?action=getUsers`)
-        .then(res => res.json())
-        .then(res => {
-          if (res.success) populateUsers(res.data);
-        })
-        .catch(err => console.error("Gagal memuat daftar user:", err));
+      const baseUrl = getCleanApiUrl();
+      if (!baseUrl) return;
+
+      const fetchUrl = `${baseUrl}?action=getUsers`;
+
+      fetch(fetchUrl, {
+        method: 'GET',
+        redirect: 'follow'
+      })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP Error status: ${res.status}`);
+        return res.json();
+      })
+      .then(res => {
+        if (res.success) {
+          populateUsers(res.data);
+        } else {
+          console.error("Gagal memuat user:", res.message);
+        }
+      })
+      .catch(err => {
+        console.error("Gagal Fetch Data User:", err);
+        document.getElementById('operatorSelect').innerHTML = '<option value="">-- Gagal Memuat Data --</option>';
+        document.getElementById('spektatorSelect').innerHTML = '<option value="">-- Gagal Memuat Data --</option>';
+      });
     };
 
     function populateUsers(users) {
@@ -236,8 +266,15 @@
       spSelect.innerHTML = optionsHTML;
     }
 
+    // Menangani Submit Form
     function handleSubmit(e) {
       e.preventDefault();
+      const baseUrl = getCleanApiUrl();
+      if (!baseUrl) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'API URL belum dikonfigurasi!' });
+        return;
+      }
+
       const btn = document.getElementById('submitBtn');
       btn.disabled = true;
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Memproses...`;
@@ -271,8 +308,12 @@
         note: formData.get('note')
       };
 
-      fetch(API_URL, {
+      fetch(baseUrl, {
         method: 'POST',
+        redirect: 'follow',
+        headers: {
+          'Content-Type': 'text/plain;charset=utf-8' // Menggunakan text/plain untuk bypass preflight CORS
+        },
         body: JSON.stringify(data)
       })
       .then(res => res.json())
@@ -293,6 +334,7 @@
       });
     }
 
+    // Register Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
