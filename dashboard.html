@@ -142,7 +142,6 @@
   <script>
     document.getElementById('currentYear').innerText = new Date().getFullYear();
 
-    // Helper untuk mengambil URL API secara aman
     function getCleanApiUrl() {
       if (typeof API_URL === 'undefined' || !API_URL) {
         console.error("API_URL belum dikonfigurasi di config.js");
