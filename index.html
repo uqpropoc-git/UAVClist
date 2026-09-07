@@ -209,9 +209,9 @@
   <script>
     document.getElementById('currentYear').innerText = new Date().getFullYear();
 
-    // Fungsi pembersih URL untuk menghindari bug tanda tanya ganda
+    // Fungsi pembersih URL
     function getCleanApiUrl() {
-      if (typeof API_URL === 'undefined' || !API_URL || API_URL.includes("https://script.google.com/macros/s/AKfycbz2eU1Ymca7VTSvVGHEYhG3TJp7W74no-2NFMe2c1SmE6lSC068N8x-bPuRw-VJF6UvIw/exec")) {
+      if (typeof API_URL === 'undefined' || !API_URL) {
         console.error("API_URL belum dikonfigurasi di config.js");
         return null;
       }
@@ -221,7 +221,10 @@
     // Memuat daftar user saat halaman dibuka
     window.onload = function() {
       const baseUrl = getCleanApiUrl();
-      if (!baseUrl) return;
+      if (!baseUrl) {
+        Swal.fire({ icon: 'error', title: 'Konfigurasi Error', text: 'API_URL belum diset pada config.js' });
+        return;
+      }
 
       const fetchUrl = `${baseUrl}?action=getUsers`;
 
@@ -238,6 +241,7 @@
           populateUsers(res.data);
         } else {
           console.error("Gagal memuat user:", res.message);
+          Swal.fire({ icon: 'warning', title: 'Peringatan', text: res.message });
         }
       })
       .catch(err => {
@@ -312,7 +316,7 @@
         method: 'POST',
         redirect: 'follow',
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8' // Menggunakan text/plain untuk bypass preflight CORS
+          'Content-Type': 'text/plain;charset=utf-8'
         },
         body: JSON.stringify(data)
       })
